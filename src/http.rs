@@ -1,6 +1,7 @@
 use crate::http::crypto::RequestSigner;
 use async_trait::async_trait;
 use std::error::Error;
+use surf::Response;
 
 pub mod crypto;
 
@@ -10,7 +11,8 @@ pub trait AzRsHttpClient {
         &self,
         path: &str,
         query_params: Option<Vec<(String, String)>>,
-    ) -> Result<String, Box<dyn Error>>;
+        headers: Option<Vec<(String, String)>>,
+    ) -> Result<Response, Box<dyn Error>>;
 }
 
 pub struct AzRsHttpClientSurf {
@@ -26,7 +28,8 @@ impl AzRsHttpClient for AzRsHttpClientSurf {
         &self,
         path: &str,
         query_params: Option<Vec<(String, String)>>,
-    ) -> Result<String, Box<dyn Error>> {
+        headers: Option<Vec<(String, String)>>,
+    ) -> Result<Response, Box<dyn Error>> {
         let client = surf::Client::new();
         let query_string = QueryStringBuilder::new(&self.api_version)
             .add_params(&mut match query_params {
@@ -41,8 +44,19 @@ impl AzRsHttpClient for AzRsHttpClientSurf {
 
         let req_signer = RequestSigner::new(&self.credential, &self.secret);
 
-        let req = client.get(&full_url).middleware(req_signer);
-        Ok(req.recv_string().await?)
+        let req = client.get(&full_url);
+        let final_req;
+
+        if headers != Option::None {
+            final_req = headers
+                .unwrap()
+                .iter()
+                .fold(req, |r, h| r.set_header((&h.0).parse().unwrap(), &h.1));
+        } else {
+            final_req = req;
+        }
+
+        Ok(final_req.middleware(req_signer).await?)
     }
 }
 
