@@ -41,8 +41,8 @@ impl<C: HttpClient> Middleware<C> for RequestSigner {
             new_request.insert_header("x-ms-date", x_ms_date)?;
             new_request.insert_header("x-ms-content-sha256", x_ms_content_sha256)?;
             new_request.insert_header("Authorization", authorization)?;
-            let res = next.run(new_request, client).await?;
-            Ok(res)
+
+            Ok(next.run(new_request, client).await?)
         })
     }
 }

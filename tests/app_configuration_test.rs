@@ -22,6 +22,29 @@ fn it_gets_a_configuration_setting_with_surf_client() {
     })
 }
 
+#[test]
+fn it_returns_not_modified_if_using_conditional_with_current_etag() {
+    let cfg: Config = confy::load_path("azrs.toml").unwrap();
+
+    task::block_on(async {
+        let http_client =
+            AzRsHttpClientSurf::new(cfg.host, cfg.api_version, cfg.credential, cfg.secret);
+
+        let app_config_client = AppConfigurationClient::new(http_client);
+        let setting = app_config_client
+            .get_configuration_setting("Azure:IntervalSecs", Option::None)
+            .await
+            .unwrap();
+
+        let setting2 = app_config_client
+            .get_configuration_setting_conditional(&setting)
+            .await
+            .unwrap();
+
+        assert_eq!(Option::None, setting2);
+    })
+}
+
 #[derive(Serialize, Deserialize)]
 struct Config {
     host: String,
